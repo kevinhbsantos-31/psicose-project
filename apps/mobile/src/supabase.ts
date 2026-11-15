@@ -14,6 +14,9 @@ AppState.addEventListener("change", (state) => {
   else supabase.auth.stopAutoRefresh();
 });
 
+/** D-47 "manter conectado": "0" faz o App encerrar a sessão salva na próxima abertura. */
+export const KEEP_SIGNED_IN = "psicose.keepSignedIn";
+
 export async function accessToken(): Promise<string> {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token ?? "";

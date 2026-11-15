@@ -13,7 +13,7 @@
     "staging": {
       "name": "psicose-server-staging",
       "durable_objects": { "bindings": [{ "name": "Room", "class_name": "Room" }] },
-      "vars": { "ENVIRONMENT": "staging", "SUPABASE_URL": "" }
+      "vars": { "ENVIRONMENT": "staging", "SUPABASE_URL": "https://ymzdoczfythrqthlzkag.supabase.co" }
     },
     "production": {
       "name": "psicose-server",

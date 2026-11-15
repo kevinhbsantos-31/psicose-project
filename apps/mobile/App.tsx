@@ -7,7 +7,8 @@ import { missingConfig, PREVIEW } from "./src/config";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RoomScreen } from "./src/screens/RoomScreen";
-import { supabase } from "./src/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { KEEP_SIGNED_IN, supabase } from "./src/supabase";
 import { color, Muted, Title } from "./src/ui";
 
 export default function App() {
@@ -22,7 +23,11 @@ export default function App() {
 
   useEffect(() => {
     if (PREVIEW) return; // prévia: sem Supabase
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    AsyncStorage.getItem(KEEP_SIGNED_IN)
+      .then((keep) => (keep === "0" ? supabase.auth.signOut({ scope: "local" }) : undefined))
+      .catch(() => undefined)
+      .then(() => supabase.auth.getSession())
+      .then(({ data }) => setSession(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => data.subscription.unsubscribe();
   }, []);
