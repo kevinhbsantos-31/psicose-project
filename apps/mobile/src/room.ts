@@ -14,6 +14,14 @@ export const ERROR_TEXT: Record<ServerError, string> = {
   mensagem_invalida: "Mensagem vazia ou longa demais (máximo de 500 caracteres).",
   destinatario_invalido: "Destinatário inválido.",
   mensagem_malformada: "Erro de comunicação com o servidor.",
+  acao_invalida: "Ação indisponível agora.",
+  disparo_negado: "O revólver não dispara nas suas mãos.",
+  monstro_nao_escolhido: "Escolha o seu Monstro primeiro.",
+  monstro_indisponivel: "Este Monstro ainda não está disponível.",
+  em_recarga: "Aguarde a recarga para tentar de novo.",
+  alvo_invalido: "Este alvo não pode ser infectado agora.",
+  isca_invalida: "Isca inválida para este Monstro.",
+  limite_de_tentativas: "Limite de tentativas simultâneas atingido.",
 };
 
 /** Fechamentos definitivos: não adianta reconectar. */

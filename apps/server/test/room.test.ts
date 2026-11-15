@@ -208,7 +208,7 @@ describe("persistência e reconexão", () => {
     monster.send({ t: "leave" });
     const end = await watcher.snapshot();
     expect(end.phase).toBe("encerrada");
-    expect(end.result).toEqual({ winner: "inocentes", reason: "monstro_abandonou" });
+    expect(end.result).toMatchObject({ winner: "inocentes", reason: "monstro_abandonou" });
     watcher.send({ t: "chat", text: "depois do fim" });
     expect(await watcher.take("error")).toEqual([{ t: "error", error: "fora_da_partida" }]);
   });

@@ -153,7 +153,18 @@ A isca fica presa à tentativa e ao alvo. O limiar inicial de **75%** vale sempr
   (pegar o revólver, abrir PV etc.). O Observador nunca escolhe o item. Cada item conta uma vez.
 - **Troca de vítima:** zera tudo; nada se transfere; a nova vítima começa em 0 e só contam ações dela depois da seleção.
   Isso vale também depois de uma infecção.
-- **A lista das 30 ações precisa de aprovação do proprietário** [Q-08]. Nenhuma lista foi inventada aqui.
+- **Lista das 30 ações — proposta v1 pedida pelo proprietário (D-59), aguarda aprovação.** [E] = evento objetivo,
+  validado direto; [S] = mensagem, validada pela revisão semântica.
+  1 [E] pegar o revólver · 2 [E] largar o revólver · 3 [E] permitir um disparo · 4 [E] disparar ·
+  5 [E] abrir um PV com alguém · 6 [E] abrir um PV com o Observador · 7 [E] enviar um áudio ·
+  8 [E] responder em menos de 5 s a uma mensagem · 9 [E] mandar 3 mensagens seguidas sem ninguém responder ·
+  10 [E] ficar 60 s sem escrever e voltar · 11 [E] mensagem de uma palavra só · 12 [E] mensagem toda em maiúsculas ·
+  13 [S] acusar alguém · 14 [S] defender um acusado · 15 [S] defender a si mesmo depois de acusado ·
+  16 [S] concordar com uma acusação · 17 [S] mudar de opinião sobre um suspeito · 18 [S] dizer que está com medo ·
+  19 [S] pedir calma ao grupo · 20 [S] propor um plano ao grupo · 21 [S] fazer pergunta direta a alguém ·
+  22 [S] pedir que alguém pegue ou largue o revólver · 23 [S] citar o Jornal VHS · 24 [S] citar a Defesa Civil ·
+  25 [S] citar um Monstro pelo nome · 26 [S] contar no chat público algo de um PV · 27 [S] rir (kkk, haha) ·
+  28 [S] pedir desculpas · 29 [S] ameaçar sair ou se despedir · 30 [S] dizer que alguém está estranho ou mudou.
 - Narrativa preservada: o Livro de Registros é o livro do faroleiro de Ponta Escura (1957; D-40).
 
 ## 4. Classificação final

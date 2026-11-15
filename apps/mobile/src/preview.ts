@@ -1,7 +1,8 @@
 // Modo prévia (EXPO_PUBLIC_PREVIEW=1): sala simulada no próprio aparelho, usando as MESMAS regras do servidor
 // (packages/rules). Não toca no Supabase nem no servidor. Só serve para ver a interface no Expo Go.
 import {
-  createRoom, join, leave, postPrivate, postPublic, startMatch, viewFor,
+  afterMessage, cancelInfect, chooseMonster, createRoom, gunAction, infect, join, leave, postPrivate, postPublic, selfInfect,
+  startMatch, systemMessage, tick, viewFor,
   type ChatMessage, type ClientMessage, type RoomState, type ServerError, type Snapshot,
 } from "@psicose/rules";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -78,11 +79,36 @@ export function usePreviewRoom(code: string) {
       if (m.t === "leave") {
         state.current = leave(state.current, ME);
         setEnded("Você saiu da sala.");
-      } else if (m.t === "chat") apply(postPublic(state.current, ME, m.text, now));
-      else apply(postPrivate(state.current, ME, m.to, m.text, now));
+      } else if (m.t === "chat" || m.t === "pm") {
+        const r = m.t === "chat" ? postPublic(state.current, ME, m.text, now) : postPrivate(state.current, ME, m.to, m.text, now);
+        if (r.ok) r.value.state = afterMessage(r.value.state, r.value.message, now);
+        apply(r);
+      } else if (m.t === "gun") {
+        const r = gunAction(state.current, ME, m.action, m.target, now);
+        if (!r.ok) return setError(ERROR_TEXT[r.error]);
+        apply({ ok: true, value: systemMessage(r.value.state, r.value.notice, now) });
+      } else {
+        const r =
+          m.t === "monster" ? chooseMonster(state.current, ME, m.id)
+          : m.t === "infect" ? infect(state.current, ME, m, messages.current, now)
+          : m.t === "infect_cancel" ? cancelInfect(state.current, ME, m.id)
+          : selfInfect(state.current, ME, now);
+        if (!r.ok) return setError(ERROR_TEXT[r.error]);
+        state.current = r.value;
+        render();
+      }
     },
-    [apply],
+    [apply, render],
   );
+
+  // Prazos (janelas de infecção, aviso de 2 min), como o alarm do servidor.
+  useEffect(() => {
+    const t = setInterval(() => {
+      state.current = tick(state.current, Date.now());
+      render();
+    }, 1000);
+    return () => clearInterval(t);
+  }, [render]);
 
   const status: Status = "conectado";
   return { snapshot, status, ended, error, send, clearError: useCallback(() => setError(null), []) };

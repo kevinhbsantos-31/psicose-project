@@ -1,6 +1,7 @@
 import {
-  audienceOf, CloseCode, createRoom, join, leave, MAX_PLAYERS, parseClientMessage, postPrivate, postPublic, secureRandomInt,
-  startMatch, viewFor, type ChatMessage, type RoomState, type ServerError, type ServerMessage,
+  afterMessage, audienceOf, cancelInfect, chooseMonster, CloseCode, createRoom, gunAction, infect, join, leave, markAway,
+  markBack, MAX_PLAYERS, nextWake, parseClientMessage, postPrivate, postPublic, secureRandomInt, selfInfect, startMatch,
+  systemMessage, tick, viewFor, type ChatMessage, type Result, type RoomState, type ServerError, type ServerMessage,
 } from "@psicose/rules";
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { USER_HEADER } from "./auth";
@@ -21,6 +22,7 @@ const REJECT_CODE: Partial<Record<ServerError, number>> = {
 /**
  * Uma sala = um Durable Object. O estado autoritativo fica no armazenamento SQLite do DO;
  * os campos em memória são só cache, recarregados em onStart (após hibernação, deploy ou queda).
+ * Prazos (janelas de infecção, aviso à vítima, abandono por ausência) usam o alarm do DO.
  */
 export class Room extends Server<Env> {
   static options = { hibernate: true };
@@ -36,7 +38,7 @@ export class Room extends Server<Env> {
   /** RPC do Worker. Falso se o código já estiver em uso. */
   async initRoom(code: string, creatorId: string): Promise<boolean> {
     if (this.room) return false;
-    await this.save(createRoom(code, creatorId, Date.now()));
+    await this.commit(createRoom(code, creatorId, Date.now()));
     return true;
   }
 
@@ -57,57 +59,94 @@ export class Room extends Server<Env> {
     for (const old of this.getConnections<ConnState>(userId)) {
       if (old.id !== conn.id) old.close(CloseCode.substituida, "substituida");
     }
-    if (!r.value.rejoined) {
-      let next = r.value.state;
-      if (next.seats.length === MAX_PLAYERS) {
-        const started = startMatch(next, secureRandomInt, Date.now()); // D-25: início automático com 4
-        if (started.ok) next = started.value;
-      }
-      await this.save(next);
+    let next = r.value.rejoined ? markBack(r.value.state, userId) : r.value.state;
+    if (!r.value.rejoined && next.seats.length === MAX_PLAYERS) {
+      const started = startMatch(next, secureRandomInt, Date.now()); // D-25: início automático com 4
+      if (started.ok) next = started.value;
     }
+    if (next !== this.room) await this.commit(next);
     this.pushSnapshots(); // inclui o snapshot completo para quem reconectou
   }
 
   async onMessage(conn: Conn, raw: WSMessage) {
     const userId = conn.state?.userId;
-    if (!userId || !this.room) return;
+    const room = this.room;
+    if (!userId || !room) return;
     const m = parseClientMessage(raw);
     if (!m) return send(conn, { t: "error", error: "mensagem_malformada" });
     const now = Date.now();
+    const apply = async (r: Result<RoomState>) => {
+      if (!r.ok) return send(conn, { t: "error", error: r.error });
+      await this.commit(r.value);
+      this.pushSnapshots();
+    };
 
     switch (m.t) {
       case "leave": {
         // D-29: no lobby libera a vaga; na partida é abandono definitivo.
-        const next = leave(this.room, userId);
-        if (next !== this.room) await this.save(next);
+        const next = leave(room, userId);
+        if (next !== room) await this.commit(next);
         conn.close(CloseCode.saiu, "saiu");
         return this.pushSnapshots(conn.id);
       }
       case "chat":
       case "pm": {
-        const r = m.t === "chat" ? postPublic(this.room, userId, m.text, now) : postPrivate(this.room, userId, m.to, m.text, now);
+        const r = m.t === "chat" ? postPublic(room, userId, m.text, now) : postPrivate(room, userId, m.to, m.text, now);
         if (!r.ok) return send(conn, { t: "error", error: r.error });
         const { state, message } = r.value;
-        // Estado e mensagem gravados juntos (atômico) antes de qualquer envio.
-        await this.ctx.storage.put({ [STATE_KEY]: state, [msgKey(message.seq)]: message });
-        this.room = state;
-        this.messages.push(message);
-        const audience = audienceOf(state, message);
+        const next = afterMessage(state, message, now); // motor de infecção
+        await this.commit(next, [message]);
+        if (next !== state) return this.pushSnapshots(); // a mensagem mudou tentativas ou o fim da partida
+        const audience = audienceOf(next, message);
         for (const c of this.getConnections<ConnState>()) {
           if (c.state && (!audience || audience.includes(c.state.userId))) send(c, { t: "msg", message });
         }
         return;
       }
+      case "gun": {
+        const r = gunAction(room, userId, m.action, m.target, now);
+        if (!r.ok) return send(conn, { t: "error", error: r.error });
+        const { state, message } = systemMessage(r.value.state, r.value.notice, now);
+        await this.commit(state, [message]);
+        return this.pushSnapshots();
+      }
+      case "monster":
+        return apply(chooseMonster(room, userId, m.id));
+      case "infect":
+        return apply(infect(room, userId, m, this.messages, now));
+      case "infect_cancel":
+        return apply(cancelInfect(room, userId, m.id));
+      case "self_infect":
+        return apply(selfInfect(room, userId, now));
     }
   }
 
-  onClose(conn: Conn) {
+  async onClose(conn: Conn) {
+    const userId = conn.state?.userId;
+    if (userId && this.room) {
+      const stillHere = [...this.getConnections<ConnState>(userId)].some((c) => c.id !== conn.id);
+      const next = stillHere ? this.room : markAway(this.room, userId, Date.now()); // D-50: mais de 1 min fora = abandono
+      if (next !== this.room) await this.commit(next);
+    }
     this.pushSnapshots(conn.id);
   }
 
-  private async save(state: RoomState) {
-    await this.ctx.storage.put(STATE_KEY, state);
+  async onAlarm() {
+    if (!this.room) return;
+    await this.commit(tick(this.room, Date.now()));
+    this.pushSnapshots(); // também entrega o aviso atrasado da infecção (2 min)
+  }
+
+  /** Grava estado e mensagens novas juntos (atômico) antes de qualquer envio e reagenda o alarm. */
+  private async commit(state: RoomState, newMessages: ChatMessage[] = []) {
+    const entries: Record<string, unknown> = { [STATE_KEY]: state };
+    for (const m of newMessages) entries[msgKey(m.seq)] = m;
+    await this.ctx.storage.put(entries);
     this.room = state;
+    this.messages.push(...newMessages);
+    const wake = nextWake(state, Date.now());
+    if (wake !== null) await this.ctx.storage.setAlarm(wake);
+    else await this.ctx.storage.deleteAlarm();
   }
 
   private reject(conn: Conn, error: ServerError) {
@@ -121,7 +160,8 @@ export class Room extends Server<Env> {
     if (!this.room) return;
     const live = [...this.getConnections<ConnState>()].filter((c) => c.id !== excludeId && c.state);
     const online = new Set(live.map((c) => c.state!.userId));
-    for (const c of live) send(c, { t: "snapshot", snapshot: viewFor(this.room, c.state!.userId, this.messages, online) });
+    const now = Date.now();
+    for (const c of live) send(c, { t: "snapshot", snapshot: viewFor(this.room, c.state!.userId, this.messages, online, now) });
   }
 }
 

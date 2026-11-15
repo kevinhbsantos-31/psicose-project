@@ -88,7 +88,7 @@ describe("início da partida", () => {
     const innocent = s0.players.find((p) => p.role === "inocente")!;
     const s = leave(s0, monster.userId);
     expect(s.phase).toBe("encerrada");
-    expect(s.result).toEqual({ winner: "inocentes", reason: "monstro_abandonou" });
+    expect(s.result).toEqual({ winner: "inocentes", reason: "monstro_abandonou", monster: { codename: monster.codename, type: null } });
     expect(viewFor(s, innocent.userId, [], new Set()).result).toEqual(s.result);
     expect(postPublic(s, innocent.userId, "oi", 3)).toEqual({ ok: false, error: "fora_da_partida" });
     expect(join(s, innocent.userId).ok).toBe(true); // os demais podem reabrir e ver o resultado
@@ -137,7 +137,8 @@ describe("visão por jogador", () => {
     const msgs = [r.value.message];
 
     const vc = viewFor(s, c!.userId, msgs, new Set(U));
-    expect(vc.me).toEqual({ codename: c!.codename, role: c!.role });
+    expect(vc.me).toMatchObject({ codename: c!.codename, role: c!.role, alive: true, infected: false });
+    expect(vc.me!.monster === null).toBe(c!.role === "inocente"); // só o Monstro vê o painel de infecção
     expect(vc.players.every((p) => !("role" in p))).toBe(true);
     expect(vc.messages).toHaveLength(0);
     expect(viewFor(s, b!.userId, msgs, new Set()).messages).toHaveLength(1);
