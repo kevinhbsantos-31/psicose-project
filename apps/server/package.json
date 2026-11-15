@@ -1,0 +1,24 @@
+﻿{
+  "name": "@psicose/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@psicose/rules": "*",
+    "jose": "^6.2.0",
+    "partyserver": "^0.5.10"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.1",
+    "@cloudflare/workers-types": "^5.20261112.1",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.161.0"
+  }
+}

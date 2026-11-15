@@ -1,0 +1,16 @@
+{
+  "name": "@psicose/finance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build:web": "tsc src/index.ts --target ES2022 --module ESNext --strict --types --skipLibCheck --outDir ../../apps/web/public/js/lib && node -e \"require('fs').renameSync('../../apps/web/public/js/lib/index.js','../../apps/web/public/js/lib/finance.js')\""
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
+  }
+}

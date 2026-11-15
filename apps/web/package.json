@@ -1,0 +1,9 @@
+{
+  "name": "@psicose/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portal PSICOSE (prévia visual). HTML/CSS/JS puros, sem dependências.",
+  "scripts": {
+    "dev": "node server.mjs"
+  }
+}

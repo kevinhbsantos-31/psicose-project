@@ -1,0 +1,24 @@
+// Servidor de partidas do PSICOSE. Ambientes: dev (local), staging, production (D-21).
+// SUPABASE_URL de staging/produção: preencher quando os projetos existirem (PT-10). Não é segredo.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "psicose-server-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+  "durable_objects": { "bindings": [{ "name": "Room", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "vars": { "ENVIRONMENT": "development", "SUPABASE_URL": "" },
+  "env": {
+    "staging": {
+      "name": "psicose-server-staging",
+      "durable_objects": { "bindings": [{ "name": "Room", "class_name": "Room" }] },
+      "vars": { "ENVIRONMENT": "staging", "SUPABASE_URL": "" }
+    },
+    "production": {
+      "name": "psicose-server",
+      "durable_objects": { "bindings": [{ "name": "Room", "class_name": "Room" }] },
+      "vars": { "ENVIRONMENT": "production", "SUPABASE_URL": "" }
+    }
+  }
+}

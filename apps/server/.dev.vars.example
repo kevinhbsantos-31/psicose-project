@@ -1,0 +1,3 @@
+# Copie para apps/server/.dev.vars (fora do controle de versão) para `npm run dev`.
+# Projeto Supabase de desenvolvimento/staging do PSICOSE (D-22). Usado só para validar os JWTs.
+SUPABASE_URL=https://SEU-PROJETO-PSICOSE.supabase.co
